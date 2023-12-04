@@ -29,7 +29,10 @@ const getAll = async (req: Request, res: Response) => {
 };
 const getOneById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const planet = await db.one(`SELECT * FROM planets WHERE id=$1;`, Number(id));
+  const planet = await db.oneOrNone(
+    `SELECT * FROM planets WHERE id=$1;`,
+    Number(id)
+  );
   res.status(200).json(planet);
 };
 
@@ -38,25 +41,28 @@ const planetSchema = Joi.object({
   name: Joi.string().required(),
 });
 
-const create = (req: Request, res: Response) => {
-  const { id, name } = req.body;
-  const newPlanet = { id, name };
+const create = async (req: Request, res: Response) => {
+  const { name } = req.body;
+  const newPlanet = { name };
   const validatedNewPlanet = planetSchema.validate(newPlanet);
   if (validatedNewPlanet.error) {
     return res
       .status(400)
       .json({ msg: validatedNewPlanet.error.details[0].message });
   } else {
+    await db.none(`INSERT INTO planets (name) VALUES ($1)`, name);
     res.status(201).json({ msg: "The planet was created" });
   }
 };
-const updateById = (req: Request, res: Response) => {
+const updateById = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name } = req.body;
+  await db.none(`UPDATE planets SET name=$2 WHERE id=$1`, [id, name]);
   res.status(200).json({ msg: "The name property was modified" });
 };
-const deleteById = (req: Request, res: Response) => {
+const deleteById = async (req: Request, res: Response) => {
   const { id } = req.params;
+  await db.none(`DELETE FROM planets WHERE id=$1`, Number(id));
   res.status(200).json({ msg: `The ${id} param was deleted` });
 };
 
